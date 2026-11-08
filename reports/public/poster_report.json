@@ -1,31 +1,59 @@
 {
-  "status": "awaiting_authorized_test_data",
-  "status_label": "في انتظار بيانات الاختبار",
-  "data_note": "No consented evaluation image manifest was supplied; no performance value is measured.",
-  "model_version": "yunet-sface-2021dec-v1",
-  "threshold": null,
-  "min_margin": 0.02,
-  "sample_size": 0,
-  "camera": "not recorded",
-  "device": "not recorded",
-  "known_query_count": 0,
-  "unknown_query_count": 0,
-  "detection_or_encoding_failures": null,
-  "metrics": {
-    "known_top1_accuracy": {
-      "value": null,
-      "status": "not_measured",
-      "target": "≥ 80%"
-    },
-    "macro_f1": {
-      "value": null,
-      "status": "not_measured",
-      "target": "≥ 0.80 (proposed)"
-    },
-    "unknown_fpir": {
-      "value": null,
-      "status": "not_measured",
-      "target": "≤ 5% (proposed)"
-    }
-  }
+  "status": "measured",
+  "dataset": {
+    "name": "FEI Face Database (original color images)",
+    "source": "https://fei.edu.br/~cet/facedatabase.html",
+    "use_terms": "FEI permits research use; redistribution or reproduction of the database is not permitted.",
+    "images": 2800,
+    "identities": 200
+  },
+  "protocol": {
+    "split_seed": 20261108,
+    "description": "Fixed seed 20261108; 100 known identities with 4 gallery, 5 validation, and 5 test images each; 50 validation-only and 50 test-only unknown identities with 14 images each; exact SHA-256 duplicates excluded and within-person OpenCV pHash clusters (Hamming <= 2) kept intact; capture sessions not documented; image-level still-image benchmark.",
+    "capture_sessions": "Not documented by source; image-level still-image benchmark, no session grouping.",
+    "near_duplicate_screen": "Exact SHA-256 duplicates grouped; within-person OpenCV pHash pairs at Hamming distance <= 2 kept in the same split."
+  },
+  "model": {
+    "version": "yunet-sface-2021dec-v1",
+    "threshold": 0.577700983985554,
+    "threshold_source": "Selected on validation and locked before test.",
+    "min_margin": 0.02,
+    "camera": "FEI still-image database; capture camera/lens not documented",
+    "device": "Local Linux x86_64 CPU; OpenCV 4.14.0; Python 3.14.10"
+  },
+  "validation": {
+    "query_count": 1200,
+    "known_query_count": 500,
+    "unknown_query_count": 700,
+    "known_top1_accuracy": 0.984,
+    "macro_f1": 0.9902356973437216,
+    "unknown_fpir": 0.0014285714285714286,
+    "known_identification_failures": 8,
+    "unknown_false_accepts": 1,
+    "query_detection_or_encoding_failures": 17,
+    "selected_threshold": 0.577700983985554,
+    "unknown_fpir_target": 0.05
+  },
+  "test": {
+    "query_count": 1200,
+    "known_query_count": 500,
+    "unknown_query_count": 700,
+    "known_identities": 100,
+    "unknown_identities": 50,
+    "known_top1_accuracy": 0.986,
+    "known_top1_correct": 493,
+    "known_identification_failures": 7,
+    "macro_f1": 0.9922499712657833,
+    "unknown_fpir": 0.0,
+    "unknown_false_accepts": 0,
+    "gallery_identities": 100,
+    "gallery_templates_encoded": 394,
+    "gallery_detection_or_encoding_failures": 6,
+    "known_query_detection_or_encoding_failures": 7,
+    "unknown_query_detection_or_encoding_failures": 9,
+    "all_query_detection_or_encoding_failures": 16,
+    "threshold": 0.577700983985554,
+    "known_top1_exceeds_80_percent": true
+  },
+  "scope_note": "This FEI still-image benchmark has no documented capture sessions or camera/lens metadata; it does not validate performance under the project's live camera protocol."
 }
