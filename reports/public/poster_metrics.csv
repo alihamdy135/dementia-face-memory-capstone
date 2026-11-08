@@ -1,11 +1,20 @@
-metric,value,target,status,sample_size
-known_top1_accuracy,,≥ 80%,not_measured,0
-macro_f1,,≥ 0.80 (proposed),not_measured,0
-unknown_fpir,,≤ 5% (proposed),not_measured,0
-sample_size,0,record actual N,reported,0
-gallery_people,,record actual count,not_measured,
-known_queries,0,record actual count,reported,
-unknown_queries,0,record actual count,reported,
-detection_or_encoding_failures,,report all failures,not_measured,
-camera,not recorded,record model and lens,reported,
-device,not recorded,record actual device,reported,
+metric,value,split,note
+dataset,FEI Face Database (original color images),all,"Official source: https://fei.edu.br/~cet/facedatabase.html; research-use only, no redistribution."
+split_seed,20261108,all,Fixed deterministic person-level split.
+capture_sessions,not documented,all,Individual-image benchmark; no session grouping.
+known_identities,100,gallery/validation/test,"Four gallery, five validation, five test images per identity."
+validation_unknown_identities,50,validation,Separate from the test-only unknown identities.
+test_unknown_identities,50,test,Fourteen test images per test-only unknown identity.
+gallery_templates_encoded,394,gallery,Six of 400 gallery images failed detection or encoding.
+selected_threshold,0.577700983985554,validation,Locked before test; max validation FPIR 5%.
+known_top1_accuracy,0.984,validation,500 known queries; detection failures count as errors.
+macro_f1,0.9902356973437216,validation,101 classes including Unknown.
+unknown_fpir,0.0014285714285714286,validation,1 false accept / 700 unknown queries.
+known_top1_accuracy,0.986,test,493 correct / 500 known queries; exceeds 80%.
+macro_f1,0.9922499712657833,test,101 classes including Unknown.
+unknown_fpir,0.0,test,0 false accepts / 700 unknown queries.
+known_identification_failures,7,test,Includes known-face detection or encoding failures.
+known_query_detection_or_encoding_failures,7,test,Counted as known-identification errors.
+unknown_query_detection_or_encoding_failures,9,test,Aggregate detector/encoder failures among unknown queries.
+gallery_detection_or_encoding_failures,6,gallery,Counted separately from query failures.
+test_queries,1200,test,500 known + 700 unknown queries.
