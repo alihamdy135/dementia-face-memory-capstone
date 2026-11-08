@@ -77,7 +77,7 @@ Create a private manifest using `examples/manifest_template.csv`. Required colum
 - `image_path`: absolute path or path relative to the manifest.
 - `person_id`: stable, human-verified identity key.
 - `split`: `gallery`, `validation`, or `test`.
-- `session_id`: optional capture-session/group identifier. When present, all images from one session must remain in one split.
+- `session_id`: capture-session/group identifier. The default camera-evaluation protocol requires it and keeps each session in one split. If a research dataset does not document sessions, leave the cells blank and use `--allow-unrecorded-sessions` only for an explicitly labeled image-level benchmark; never invent session IDs or use that option for project-camera evaluation.
 
 Protocol requirements:
 
