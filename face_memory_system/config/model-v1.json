@@ -1,0 +1,21 @@
+{
+  "model": {
+    "version": "yunet-sface-2021dec-v1",
+    "detector": "YuNet 2023mar",
+    "recognizer": "SFace 2021dec",
+    "embedding": "unit-normalized cosine"
+  },
+  "detector": {
+    "score_threshold": 0.9,
+    "nms_threshold": 0.3,
+    "top_k": 5000
+  },
+  "matcher": {
+    "provisional_threshold": 0.45,
+    "min_margin": 0.02,
+    "threshold_status": "provisional_not_calibrated"
+  },
+  "evaluation": {
+    "unknown_fpir_target": 0.05
+  }
+}

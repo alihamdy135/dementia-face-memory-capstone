@@ -1,0 +1,23 @@
+services:
+  mongodb:
+    image: mongo:7.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - dementia_mongodb:/data/db
+
+  face-model:
+    build:
+      context: ./face_memory_system
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8001:8000"
+    environment:
+      PYTHONUNBUFFERED: "1"
+      MODEL_SERVICE_TOKEN: ${MODEL_SERVICE_TOKEN:-}
+    profiles: ["model"]
+
+volumes:
+  dementia_mongodb:

@@ -1,0 +1,11 @@
+metric,value,target,status,sample_size
+known_top1_accuracy,,≥ 80%,not_measured,0
+macro_f1,,≥ 0.80 (proposed),not_measured,0
+unknown_fpir,,≤ 5% (proposed),not_measured,0
+sample_size,0,record actual N,reported,0
+gallery_people,,record actual count,not_measured,
+known_queries,0,record actual count,reported,
+unknown_queries,0,record actual count,reported,
+detection_or_encoding_failures,,report all failures,not_measured,
+camera,not recorded,record model and lens,reported,
+device,not recorded,record actual device,reported,

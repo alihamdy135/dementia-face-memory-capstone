@@ -1,0 +1,4 @@
+# Install the OpenCV wheel with Raspberry Pi OS packages or a compatible piwheels index.
+# Keep Python and OpenCV aligned with the current 32-bit Raspberry Pi OS release.
+numpy>=1.23,<2.0
+opencv-contrib-python-headless>=4.8,<5

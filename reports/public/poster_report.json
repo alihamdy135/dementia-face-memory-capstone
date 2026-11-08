@@ -1,0 +1,31 @@
+{
+  "status": "awaiting_authorized_test_data",
+  "status_label": "في انتظار بيانات الاختبار",
+  "data_note": "No consented evaluation image manifest was supplied; no performance value is measured.",
+  "model_version": "yunet-sface-2021dec-v1",
+  "threshold": null,
+  "min_margin": 0.02,
+  "sample_size": 0,
+  "camera": "not recorded",
+  "device": "not recorded",
+  "known_query_count": 0,
+  "unknown_query_count": 0,
+  "detection_or_encoding_failures": null,
+  "metrics": {
+    "known_top1_accuracy": {
+      "value": null,
+      "status": "not_measured",
+      "target": "≥ 80%"
+    },
+    "macro_f1": {
+      "value": null,
+      "status": "not_measured",
+      "target": "≥ 0.80 (proposed)"
+    },
+    "unknown_fpir": {
+      "value": null,
+      "status": "not_measured",
+      "target": "≤ 5% (proposed)"
+    }
+  }
+}
