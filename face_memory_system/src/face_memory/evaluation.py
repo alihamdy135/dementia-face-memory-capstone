@@ -15,7 +15,9 @@ class Encoder(Protocol):
     def encode_image(self, image_path: str | Path) -> Sequence[float]: ...
 
 
-def _load_manifest(manifest_path: str | Path) -> tuple[list[dict[str, str]], Path]:
+def _load_manifest(
+    manifest_path: str | Path, allow_unrecorded_sessions: bool = False
+) -> tuple[list[dict[str, str]], Path, str]:
     path = Path(manifest_path).resolve()
     if not path.is_file():
         raise FileNotFoundError(f"Manifest not found: {path}")
@@ -31,14 +33,13 @@ def _load_manifest(manifest_path: str | Path) -> tuple[list[dict[str, str]], Pat
     allowed_splits = {"gallery", "validation", "test"}
     seen_paths: set[str] = set()
     session_splits: dict[str, set[str]] = {}
+    session_values: set[str] = set()
     for row in rows:
         row["image_path"] = row["image_path"].strip()
         row["person_id"] = row["person_id"].strip()
         row["split"] = row["split"].strip().lower()
         if not row["image_path"] or not row["person_id"]:
             raise ValueError("Each manifest row needs image_path and person_id")
-        if not row.get("session_id", "").strip():
-            raise ValueError("Each image must include a non-empty capture session_id")
         if row["split"] not in allowed_splits:
             raise ValueError(f"Invalid split {row['split']!r}; expected gallery, validation, or test")
         image_path = Path(row["image_path"])
@@ -52,7 +53,24 @@ def _load_manifest(manifest_path: str | Path) -> tuple[list[dict[str, str]], Pat
             raise ValueError(f"The same image appears more than once in the manifest: {image_path}")
         seen_paths.add(str(image_path))
         session_id = row.get("session_id", "").strip()
-        session_splits.setdefault(session_id, set()).add(row["split"])
+        session_values.add(session_id)
+        if session_id:
+            session_splits.setdefault(session_id, set()).add(row["split"])
+    if session_values == {""}:
+        if not allow_unrecorded_sessions:
+            raise ValueError(
+                "Capture sessions are unrecorded; use the explicit benchmark-only "
+                "allow_unrecorded_sessions option without inventing session IDs"
+            )
+        session_status = "not_documented; individual-image benchmark, no session grouping"
+    elif "" in session_values:
+        raise ValueError("Session IDs must be either recorded for every row or blank for every row")
+    else:
+        if allow_unrecorded_sessions:
+            raise ValueError(
+                "The unrecorded-session option requires every session_id cell to be blank"
+            )
+        session_status = "recorded; each session is held within one split"
     leaked_sessions = [session for session, splits in session_splits.items() if len(splits) > 1]
     if leaked_sessions:
         raise ValueError(
@@ -70,7 +88,7 @@ def _load_manifest(manifest_path: str | Path) -> tuple[list[dict[str, str]], Pat
     test_unknown -= gallery_ids
     if validation_unknown & test_unknown:
         raise ValueError("Unknown identities must be disjoint between validation and test")
-    return rows, path.parent
+    return rows, path.parent, session_status
 
 
 def evaluate_manifest(
@@ -82,6 +100,9 @@ def evaluate_manifest(
     min_margin: float = MIN_MARGIN,
     camera: str = "not recorded",
     device: str = "not recorded",
+    allow_unrecorded_sessions: bool = False,
+    dataset_name: str | None = None,
+    protocol_note: str | None = None,
 ) -> dict[str, object]:
     split = split.lower()
     if split not in {"validation", "test"}:
@@ -91,17 +112,24 @@ def evaluate_manifest(
     if max_unknown_fpir is not None and split != "validation":
         raise ValueError("Threshold calibration is allowed only on the validation split")
 
-    rows, _ = _load_manifest(manifest_path)
+    rows, _, session_status = _load_manifest(
+        manifest_path, allow_unrecorded_sessions=allow_unrecorded_sessions
+    )
     gallery_rows = [row for row in rows if row["split"] == "gallery"]
+    gallery_identity_ids = {row["person_id"] for row in gallery_rows}
     gallery: dict[str, list[list[float]]] = {}
+    gallery_detection_failures = 0
     for row in gallery_rows:
-        embedding = encoder.encode_image(row["resolved_path"])
+        try:
+            embedding = encoder.encode_image(row["resolved_path"])
+        except FaceEncoderError:
+            gallery_detection_failures += 1
+            continue
         gallery.setdefault(row["person_id"], []).append([float(value) for value in embedding])
 
     queries = [row for row in rows if row["split"] == split]
     if not queries:
         raise ValueError(f"Manifest has no {split} queries")
-    gallery_ids = set(gallery)
     true_ids: list[str | None] = []
     candidate_ids: list[str | None] = []
     scores: list[float] = []
@@ -112,7 +140,7 @@ def evaluate_manifest(
     candidate_matcher = IdentityMatcher(threshold=-1.0, min_margin=0.0)
 
     for row in queries:
-        actual_id = row["person_id"] if row["person_id"] in gallery_ids else None
+        actual_id = row["person_id"] if row["person_id"] in gallery_identity_ids else None
         started = time.perf_counter()
         try:
             embedding = encoder.encode_image(row["resolved_path"])
@@ -158,8 +186,9 @@ def evaluate_manifest(
         true_ids, candidate_ids, scores, threshold, margins=margins, min_margin=min_margin
     )
     report["split"] = split
-    report["gallery_person_count"] = len(gallery)
-    report["gallery_template_count"] = len(gallery_rows)
+    report["gallery_person_count"] = len(gallery_identity_ids)
+    report["gallery_template_count"] = sum(len(items) for items in gallery.values())
+    report["gallery_detection_or_encoding_failures"] = gallery_detection_failures
     report["detection_or_encoding_failures"] = detection_failures
     report["detection_or_encoding_failure_rate"] = detection_failures / len(queries)
     report["latency"] = latency_summary(latencies)
@@ -167,10 +196,13 @@ def evaluate_manifest(
     report["metadata"] = {
         "camera": camera,
         "device": device,
-        "known_identities": len(gallery_ids),
-        "unknown_identities": len({row["person_id"] for row in queries if row["person_id"] not in gallery_ids}),
+        "known_identities": len(gallery_identity_ids),
+        "unknown_identities": len({row["person_id"] for row in queries if row["person_id"] not in gallery_identity_ids}),
         "known_identity_count": sum(identity is not None for identity in true_ids),
         "stranger_query_count": sum(identity is None for identity in true_ids),
+        "capture_session_metadata": session_status,
+        "dataset_name": dataset_name,
+        "protocol_note": protocol_note,
     }
     report["predictions"] = prediction_rows
     if selected_threshold is not None:
