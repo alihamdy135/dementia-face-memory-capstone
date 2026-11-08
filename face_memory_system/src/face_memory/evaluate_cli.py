@@ -22,6 +22,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--min-margin", type=float, default=MIN_MARGIN)
     parser.add_argument("--camera", default="not recorded")
     parser.add_argument("--device", default="not recorded")
+    parser.add_argument(
+        "--allow-unrecorded-sessions",
+        action="store_true",
+        help="Benchmark-only: allow all session_id cells to remain blank when the source has no session metadata",
+    )
+    parser.add_argument("--dataset-name")
+    parser.add_argument("--protocol-note")
     parser.add_argument("--yunet", type=Path, default=DEFAULT_YUNET)
     parser.add_argument("--sface", type=Path, default=DEFAULT_SFACE)
     parser.add_argument("--output", type=Path, help="Optional private JSON report path")
@@ -43,6 +50,9 @@ def main(argv: list[str] | None = None) -> int:
                 min_margin=args.min_margin,
                 camera=args.camera,
                 device=args.device,
+                allow_unrecorded_sessions=args.allow_unrecorded_sessions,
+                dataset_name=args.dataset_name,
+                protocol_note=args.protocol_note,
             )
         else:
             if args.max_unknown_fpir is not None or args.validation_report is None:
@@ -54,6 +64,18 @@ def main(argv: list[str] | None = None) -> int:
                 return 2
             if locked.get("model_version") != MODEL_VERSION or float(locked.get("min_margin", -1)) != args.min_margin:
                 print("Model version or min_margin differs from the locked validation run", file=sys.stderr)
+                return 2
+            locked_metadata = locked.get("metadata") or {}
+            if bool(args.allow_unrecorded_sessions) != (
+                locked_metadata.get("capture_session_metadata", "").startswith("not_documented;")
+            ):
+                print("Session-metadata handling must match the locked validation run", file=sys.stderr)
+                return 2
+            if args.dataset_name != locked_metadata.get("dataset_name"):
+                print("Dataset name must match the locked validation run", file=sys.stderr)
+                return 2
+            if args.protocol_note != locked_metadata.get("protocol_note"):
+                print("Protocol note must match the locked validation run", file=sys.stderr)
                 return 2
             locked_threshold = float(locked["selected_threshold"])
             if args.threshold is not None and args.threshold != locked_threshold:
@@ -67,6 +89,9 @@ def main(argv: list[str] | None = None) -> int:
                 min_margin=args.min_margin,
                 camera=args.camera,
                 device=args.device,
+                allow_unrecorded_sessions=args.allow_unrecorded_sessions,
+                dataset_name=args.dataset_name,
+                protocol_note=args.protocol_note,
             )
     except (FileNotFoundError, ValueError, RuntimeError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
