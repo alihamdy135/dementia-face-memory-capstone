@@ -1,0 +1,29 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "app": {
+      "root": ".",
+      "bindings": [
+        {
+          "type": "service",
+          "service": "face-model",
+          "format": "url",
+          "env": "MODEL_SERVICE_URL"
+        }
+      ]
+    },
+    "face-model": {
+      "root": "face_memory_system",
+      "runtime": "container",
+      "entrypoint": "Dockerfile"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "app"
+      }
+    }
+  ]
+}

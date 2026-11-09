@@ -1,22 +1,22 @@
-# دليل جمع بيانات تقييم مصرح بها
+# Consented Evaluation Data Guide
 
-لا تبدأ التقييم على صور عائلية أو صور مرضى من دون إذن صريح ومحدد للتخزين المؤقت والتقييم. اجمع أقل قدر ممكن، واشرح للمشارك أو وليّه الغرض ومدة الاحتفاظ وإمكانية السحب. خزّن الملفات محليًا في `private_data/` خارج الفرع العام، وامسحها عند انتهاء الحاجة.
+Do not evaluate on family or patient images without explicit, specific permission for temporary storage and evaluation. Explain the purpose, retention period, and withdrawal process to each participant or their guardian. Store files locally under `private_data/`, outside the public repository, and delete them when they are no longer needed.
 
-## تقسيم الصور
+## Split the images
 
-- استخدم معرفات عشوائية مثل `known-001` و`stranger-val-01`، لا الاسم الحقيقي.
-- `gallery`: صور تسجيل، لكل شخص معروف، من جلسة أو جلسات منفصلة.
-- `validation`: صور لاحقة للأشخاص المعروفين وجلسات جديدة، إضافة إلى غرباء لم يظهروا في gallery.
-- `test`: جلسات لاحقة مستقلة للأشخاص المعروفين، وغرباء مختلفون تمامًا عن غرباء validation.
-- اجعل كل `session_id` في split واحد فقط. لا تقسّم صور فيديو واحد أو جلسة واحدة بين الأقسام.
-- سجّل الكاميرا والعدسة ودقة الصورة والإضاءة والجهاز. لا تحسّن threshold بعد مشاهدة test.
-- كل صف يصف صورة واحدة مؤكدة الهوية. يسجل التقييم فشل اكتشاف الوجه كإخفاق، لا تُحذف حالات الفشل بعد رؤيتها.
+- Use random IDs such as `known-001` and `stranger-val-01`, never a person's real name.
+- `gallery`: enrollment images for each known person, captured in one or more sessions.
+- `validation`: later images of known people from new sessions, plus strangers that do not appear in the gallery.
+- `test`: independent later sessions for known people, plus a completely different set of strangers from validation.
+- Keep each `session_id` in one split. Do not put images from one video or capture session into multiple splits.
+- Record the camera, lens, image resolution, lighting, and device. Do not tune the threshold after viewing test results.
+- Each row must describe one image with a human-verified identity. A face-detection failure counts as an evaluation failure; do not remove failed cases after seeing the results.
 
-إذا كان benchmark بحثي لمصدر لا ينشر جلسات الالتقاط لكل صورة، اترك `session_id` فارغًا كما هو، ولا تنشئ معرفات جلسات مصطنعة. استخدم `--allow-unrecorded-sessions` فقط لهذا النوع من benchmarks، ودوّن أن التقسيم على مستوى الصور ولا يمثل جلسات كاميرا مستقلة. لا تستخدم هذا الخيار لتقييم صور المشروع التي تتوفر لها جلسات تصوير.
+Some research datasets do not publish a capture session for each image. In that case, leave `session_id` blank and do not invent session IDs. Use `--allow-unrecorded-sessions` only for a clearly labeled image-level benchmark. State that it does not measure independent camera sessions. Do not use this option for project-camera evaluation when capture sessions are available.
 
-## قالب manifest
+## Manifest template
 
-انسخ `face_memory_system/examples/manifest_template.csv` إلى المساحة الخاصة. مثال توضيحي للأسماء فقط (لا توجد صور اختبار مرفقة):
+Copy `face_memory_system/examples/manifest_template.csv` to the private data directory. The following example lists file names only; it does not include evaluation images:
 
 ```csv
 image_path,person_id,split,session_id
@@ -27,15 +27,16 @@ test/known-001-c.jpg,known-001,test,session-04
 test/stranger-test-01-a.jpg,stranger-test-01,test,session-05
 ```
 
-يجب أن يكون كل شخص معروف في `gallery` وvalidation وtest. كل غريب يدخل validation أو test فقط، ولا يتكرر معرف الغريب بينهما.
+Each known identity must appear in `gallery`, `validation`, and `test`. A stranger appears only in validation or test, and stranger IDs must not overlap between those splits.
 
-## اختيار العتبة وقراءة المقاييس
+## Select a threshold and report metrics
 
-اختر الحد بواسطة validation فقط، مع `unknown_fpir ≤ 0.05` كهدف مقترح، وثبّت `model_version` و`min_margin` قبل تشغيل test. تقرير test يُحمّل من تقرير المعايرة نفسه.
+Choose the threshold on validation data only. `unknown_fpir ≤ 0.05` is an example proposed target; select the acceptable limit before running test. Freeze `model_version` and `min_margin` before testing. The test report must use the validation calibration report.
 
-- `known_top1_accuracy`: الصحيح من المعروفين مقسومًا على كل استعلامات المعروفين. رفض معروف أو إسناده لهوية أخرى خطأ.
-- `macro_f1`: متوسط F1 على معرفات الهويات المعروفة وفئة `Unknown`.
-- `unknown_fpir`: نسبة صور الغرباء التي أُسندت خطأً إلى أي شخص مسجل.
-- سجل حجم العينة، عدد known/unknown، عدد هويات gallery، عدد فشل الكشف/استخراج البصمة، نوع الكاميرا والجهاز. لا تخلط هذا بقياس latency من Pi إلى الصوت؛ التقرير البرمجي يقيس مسار الصورة إلى المطابقة فقط.
+- `known_top1_accuracy`: correct known-person identifications divided by all known queries. Rejecting a known person or returning the wrong identity is an error.
+- `macro_f1`: the unweighted mean F1 across known identity classes and the `Unknown` class.
+- `unknown_fpir`: the share of stranger images incorrectly assigned to any enrolled person.
+- Record the sample size, known and unknown counts, enrolled identities, detection or embedding failures, camera, and device.
+- The image evaluation CLI measures the image-to-match path. It does not measure end-to-end latency from a live camera frame to spoken audio on a Pi.
 
-لا تُعلن هدف 80% متحققًا قبل تقرير test مؤهل. العتبة الافتراضية للموقع وضع عرض مؤقت، وليست حدًا موصى به للاستخدام الحقيقي.
+Do not claim the 80% goal is met until an eligible test report demonstrates it. The website's default threshold is a provisional demo setting, not a threshold validated for real use.

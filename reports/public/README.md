@@ -1,34 +1,47 @@
-# نتيجة FEI المنشورة
+# FEI Face Recognition Benchmark
 
-## النتيجة
+## Results
 
-شغّلنا YuNet + SFace الحالي على الصور الأصلية الملوّنة من **FEI Face Database**. عُيّنت العتبة على validation ثم ثُبّتت قبل فتح test.
+YuNet + SFace was evaluated on the original color images from the [FEI Face Database](https://fei.edu.br/~cet/facedatabase.html). The threshold was selected on validation data, then locked before the test split was evaluated.
 
-| المجموعة | Known Top‑1 | Macro F1 | Unknown FPIR | المحاولات |
-|---|---:|---:|---:|---:|
-| Validation | 98.4% | 99.02% | 0.14% (1/700) | 500 معروف + 700 مجهول |
-| Test | **98.6%** | **99.22%** | **0% (0/700)** | 500 معروف + 700 مجهول |
+| Split | Known Top-1 | Macro F1 | Unknown FPIR | Queries |
+| --- | ---: | ---: | ---: | ---: |
+| Validation | 98.4% | 99.02% | 0.14% (1/700) | 500 known + 700 unknown |
+| Test | **98.6%** | **99.22%** | **0% (0/700)** | 500 known + 700 unknown |
 
-تجاوز Known Top‑1 هدف 80% في هذا الاختبار. أخفقت 7 من 500 صورة اختبار لأشخاص معروفين؛ احتُسبت حالات فشل كشف/ترميز الوجه ضمن أخطاء التعرف. فشل كشف/ترميز 7 استعلامات معروفة و9 مجهولة، وفشل 6 من 400 صورة معرض في إنشاء بصمة. اختُبرت **100 هوية معروفة** و**50 هوية مجهولة للتحقق** و**50 هوية مجهولة للاختبار**؛ لم تتداخل مجموعتا الغرباء.
+Known Top-1 exceeded the capstone's 80% target on this test split. Seven of 500 known test queries failed to return the correct identity. This includes known-face detection or encoding failures. Across test queries, 7 known and 9 unknown images failed face detection or embedding extraction; 6 of 400 gallery images also failed encoding.
 
-## التقسيم والإعداد
+## Evaluation protocol
 
-- 2,800 صورة من 200 شخص؛ كل الصور الأربع عشرة لكل شخص دخلت في قسم واحد.
-- seed ثابت: `20261108`. لكل هوية معروفة: 4 صور معرض و5 validation و5 test. استُخدمت 50 هوية للـvalidation فقط و50 مختلفة للـtest فقط، مع 14 صورة لكل غريب.
-- جُمعت الصور ذات SHA‑256 المتطابق، وأُبقيت مجموعات صور الشخص نفسه التي تقاربها بصريًا (OpenCV pHash، مسافة Hamming ≤ 2) داخل القسم نفسه.
-- لا توثّق FEI جلسات التصوير أو طراز الكاميرا/العدسة. لم نختلق معرّفات جلسات؛ لذلك هذه نتيجة benchmark لصور ثابتة منفصلة، وليست تقييمًا لبروتوكول كاميرا المشروع.
-- عُيّنت عتبة التشابه على validation بهدف أقصى FPIR قدره 5%، ثم ثُبّتت عند `0.57770098` قبل test. إصدار الموديل `yunet-sface-2021dec-v1` و`min_margin=0.02`.
+- The dataset contains 2,800 images of 200 people. Each of 100 enrolled identities contributed 4 gallery, 5 validation, and 5 test images.
+- Fifty stranger identities were used for validation only and a separate 50 for test only, with 14 images per stranger.
+- The split used fixed seed `20261108`. Exact SHA-256 duplicates were grouped, and within-person near-duplicate images (OpenCV pHash Hamming distance ≤ 2) remained in the same split.
+- The test set contains 500 known and 700 unknown queries. The gallery contains 394 encoded templates; 6 of its 400 images failed detection or encoding.
+- The selected cosine similarity threshold was `0.57770098`; it was selected on validation with a maximum unknown FPIR constraint of 5%, then locked before test. `min_margin` was `0.02`; model version was `yunet-sface-2021dec-v1`.
+- FEI does not document capture sessions or camera/lens details. No session IDs were invented. This is a fixed-image benchmark, not an evaluation of the project's live camera protocol or Raspberry Pi 2.
 
-مصفوفة الالتباس ومنحنى الدقة/FPIR يعرضان نتائج مجمعة فقط. أسماء الصفوف والأعمدة في مصفوفة الالتباس معرّفات عشوائية لهذه الصورة، ولا يُنشر معها جدول ربط للأشخاص.
+The threshold used by the website remains `0.45` and is marked provisional. The FEI threshold above is specific to this benchmark and must not be presented as a live-camera calibration.
 
-## المصدر وشروط الاستخدام
+## Python-generated figures
 
-المصدر هو [صفحة FEI Face Database الرسمية](https://fei.edu.br/~cet/facedatabase.html). يجيز المصدر الاستخدام البحثي ويمنع إعادة توزيع قاعدة البيانات أو إعادة إنتاجها. لذلك لا توجد صور أو بصمات وجه أو manifest أو معرفات أشخاص أو تقارير تفصيلية في هذا المستودع؛ حُفظت محليًا داخل `private_data/` المستثناة من Git.
+All ten poster figures are rendered with Python and Matplotlib from the evaluation reports. Each is available as a scalable SVG and a 300-DPI PNG. The source and figure descriptions, including the X and Y axes, are in [the figure guide](fei_poster_figures/README.md); the generator is [plot_fei_poster.py](fei_poster_figures/plot_fei_poster.py).
 
-## الملفات
+| Figure | SVG | PNG |
+| --- | --- | --- |
+| Test metrics | [Open](fei_poster_figures/01_test_metrics.svg) | [Open](fei_poster_figures/01_test_metrics.png) |
+| Dataset split | [Open](fei_poster_figures/02_dataset_split.svg) | [Open](fei_poster_figures/02_dataset_split.png) |
+| Test outcomes | [Open](fei_poster_figures/03_test_outcomes.svg) | [Open](fei_poster_figures/03_test_outcomes.png) |
+| Similarity distribution | [Open](fei_poster_figures/04_similarity_distribution.svg) | [Open](fei_poster_figures/04_similarity_distribution.png) |
+| Margin distribution | [Open](fei_poster_figures/05_margin_distribution.svg) | [Open](fei_poster_figures/05_margin_distribution.png) |
+| Detection and encoding failures | [Open](fei_poster_figures/06_detection_encoding_failures.svg) | [Open](fei_poster_figures/06_detection_encoding_failures.png) |
+| Identity recall | [Open](fei_poster_figures/07_identity_recall.svg) | [Open](fei_poster_figures/07_identity_recall.png) |
+| Validation operating curve | [Open](fei_poster_figures/08_validation_operating_curve.svg) | [Open](fei_poster_figures/08_validation_operating_curve.png) |
+| CPU latency | [Open](fei_poster_figures/09_cpu_latency.svg) | [Open](fei_poster_figures/09_cpu_latency.png) |
+| Decision flow | [Open](fei_poster_figures/10_decision_flow.svg) | [Open](fei_poster_figures/10_decision_flow.png) |
 
-- `poster_report.json`: إحصاءات إجمالية وبروتوكول القياس، دون سجلات أو معرفات أشخاص.
-- `poster_metrics.csv`: المقاييس والأعداد المجمعة.
-- `confusion_matrix.svg`: مصفوفة اختبار بمعرفات عشوائية.
-- `accuracy_fpir_threshold.svg`: منحنى المعايرة على validation.
-- `system_flow.svg`: رسم عام لمسار التطبيق.
+The aggregate test confusion matrix and validation threshold curve are also available as [SVG files](confusion_matrix.svg) and [SVG files](accuracy_fpir_threshold.svg). The structured aggregate data is in [poster_report.json](poster_report.json) and [poster_metrics.csv](poster_metrics.csv).
+
+## Source and use terms
+
+The source is the [official FEI Face Database page](https://fei.edu.br/~cet/facedatabase.html). FEI permits research use but does not permit redistribution or reproduction of the database. This repository contains no FEI images, face embeddings, private manifest, personal identifiers, or detailed per-image reports. Original data and detailed reports remain local under the Git-ignored `private_data/` directory.
+

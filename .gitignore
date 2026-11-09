@@ -20,8 +20,10 @@ private_data/
 **/*.jpeg
 **/*.png
 !reports/public/screenshots/*.png
+!reports/public/fei_poster_figures/*.png
 **/*.webp
 reports/private/
+reports/fei_poster_figures/
 face_memory_system/data/
 face_memory_system/models/*.onnx
 face_memory_system/reports/private/

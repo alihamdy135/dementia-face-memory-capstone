@@ -16,6 +16,7 @@ services:
       - "127.0.0.1:8001:8000"
     environment:
       PYTHONUNBUFFERED: "1"
+      PORT: "8000"
       MODEL_SERVICE_TOKEN: ${MODEL_SERVICE_TOKEN:-}
     profiles: ["model"]
 

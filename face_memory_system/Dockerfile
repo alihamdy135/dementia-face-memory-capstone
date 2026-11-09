@@ -8,5 +8,6 @@ COPY config ./config
 RUN pip install --no-cache-dir . && python models/download_models.py --directory ./models
 ENV FACE_MEMORY_MODEL_DIR=/app/models
 ENV FACE_MEMORY_SETTINGS_PATH=/app/config/model-v1.json
-EXPOSE 8000
-CMD ["uvicorn", "face_memory.http_service:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+ENV PORT=80
+EXPOSE 80
+CMD ["sh", "-c", "uvicorn face_memory.http_service:app --host 0.0.0.0 --port ${PORT:-80} --workers 1"]

@@ -1,97 +1,100 @@
-# ذاكرة | مساعد التذكّر
+# Memento — Personal Memory Assistant
 
-نسخة محلية لمشروع Capstone: واجهة عربية RTL، خدمة Next.js App Router وTypeScript، خدمة FastAPI داخلية لمعالجة الصور، وMongoDB Community لتخزين حسابات منفصلة. أداة تقييم YuNet/SFace ونسخة Raspberry Pi 2 تستخدمان `IdentityMatcher` وإعدادات الموديل نفسها.
+Memento is a capstone prototype that helps a caregiver identify a person from an enrolled face and recall caregiver-provided facts and conversation notes. It is not a medical device and must not be used for diagnosis, safety decisions, or unsupervised care.
 
-> **نتيجة بحثية فعلية:** اختُبر YuNet + SFace محليًا على صور FEI الأصلية الملوّنة. على test: Known Top‑1 = **98.6%** (493/500)، وMacro F1 = **99.22%**، وUnknown FPIR = **0%** (0/700)، عند حدّ benchmark **0.57770** اختير مسبقًا من validation. تعدّت دقة Known Top‑1 هدف 80%. حد التشغيل الافتراضي `0.45` ما زال مؤقتًا ولم يتغير؛ اختبار FEI بصور ثابتة لا يعاير كاميرا المشروع الحية، كما أن FEI لا توثّق جلسات التصوير أو الكاميرا/العدسة. استخدم بيانات FEI للبحث فقط ولا تعِد توزيع الصور أو نسخها. لا تستخدم التعرف أو الصوت كقرار طبي أو كإجراء سلامة.
+The repository contains an English, left-to-right Next.js website; a FastAPI face-processing service; MongoDB-backed user accounts and memories; a Raspberry Pi 2 offline runtime; and reproducible, Python-generated evaluation figures.
 
-## ما يعمل
+## Current face-recognition benchmark
 
-- حسابات بكلمات مرور مشتقة بـscrypt وجلسة Cookie موقعة؛ كل قراءة وكتابة للملفات الشخصية والنتائج والمحادثات مقيّدة بمعرّف الحساب.
-- تسجيل شخص بالاسم والصلة، ورفع 1 إلى 8 صور. تُقبل أو تُرفض كل صورة منفردة حسب وجود وجه واحد، ولا يُحتفظ بالملف الأصلي أو بمساره؛ تُخزن بصمة الوجه وإصدار الموديل.
-- تعديل الشخص وحذفه مع البصمات وسجل النتائج والمحادثات المرتبط به.
-- التعرف من صورة أو من لقطة واحدة بعد معاينة الكاميرا. لا يوجد تصوير تلقائي. تظهر حالات المعروف، المجهول، الملتبس، بلا وجه، وجوه متعددة، ورفض الإذن.
-- تسجيل ملاحظة صوتية فقط بعد تأكيد الشخص وموافقة واضحة. التفريغ العربي اختياري عبر Whisper محلي، والصوت المؤقت لا يُحفظ؛ النص يظهر للمراجعة ولا يدخل السجل إلا بعد تأكيده.
-- تصدير شخص مختار وبصماته إلى ملف JSON خاص للاستيراد على Pi؛ لا يُصدّر سجل الصور أو المحادثات.
-- دليل تقييم يمنع تسرب جلسات التصوير وفصل الغرباء بين validation وtest، ويفرض استخدام تقرير المعايرة قبل اختبار test.
-- طابور SQLite على Pi يرفع حالة الجهاز والنتائج المجهولة وزمن الاستجابة فقط عند الاتصال.
+YuNet + SFace was evaluated locally on the original color images from the FEI Face Database. On the locked test split, Known Top-1 accuracy was **98.6%** (493/500), Macro F1 was **99.22%**, and Unknown FPIR was **0%** (0/700). The benchmark threshold, `0.57770098`, was selected on a separate validation split before test evaluation. The Known Top-1 result is above the project's 80% target for this benchmark.
 
-## المتطلبات
+This is a fixed-image research benchmark, not a measurement of the project's live camera, Raspberry Pi 2, or real-world caregiver workflow. FEI does not document capture sessions or camera and lens details, so no session IDs were invented. The website's default threshold, `0.45`, remains provisional and was not calibrated by this benchmark. FEI images and manifests are not included because the source permits research use but prohibits redistribution or reproduction.
 
-- Node.js 20.9 أو أحدث وnpm.
-- Python 3.11 أو أحدث.
-- MongoDB Community محلي، أو `docker compose` إذا كان محرك Docker متاحًا.
-- Compass اختياري لعرض نفس قاعدة MongoDB المحلية.
+See [the public benchmark report](reports/public/README.md) and the [Python-generated figures](reports/public/fei_poster_figures/README.md). All published identity labels in figures are anonymized.
 
-## تشغيل محلي
+## Features
 
-من مجلد المشروع:
+- Separate accounts with scrypt password hashing and signed session cookies. People, recognitions, and memories are scoped to the signed-in account.
+- Add a person with a caregiver-entered name and relationship, then enroll 1–8 images. Each image must contain exactly one face. Original uploads are processed in memory and are not retained; face embeddings and model version are stored.
+- Edit or remove a person and the associated embeddings, recognition history, and conversation notes.
+- Identify a person from an uploaded image or a single camera snapshot after preview. The camera does not capture automatically. The app can return known, unknown, ambiguous, no-face, multiple-face, or permission-denied outcomes.
+- Record an optional voice note only after confirming the identified person and consent. Local Whisper transcription is optional. Audio is temporary; text must be reviewed and confirmed before it is saved.
+- Export one selected person's face embeddings as a private JSON file for import on the Pi. Conversation history and source images are not exported.
+- Evaluate with separate gallery, validation, and test data. The evaluation CLI supports threshold calibration, open-set metrics, confusion matrices, and latency reporting.
+- The Pi runtime can work offline. When a network connection is available, it can upload device status, unknown-result status, and response time; it does not upload images, embeddings, or names.
+
+## Requirements
+
+- Node.js 20.9 or later and npm.
+- Python 3.11 or later for the web model service (the standalone package supports Python 3.10+).
+- MongoDB Community locally, or Docker Compose with Docker available.
+- MongoDB Compass is optional.
+
+## Run locally
+
+From the repository root:
 
 ```bash
 cp .env.example .env
 ```
 
-غيّر `SESSION_SECRET` و`DEVICE_SYNC_TOKEN` إلى قيم عشوائية طويلة. مثال لتوليد القيم محليًا:
+Generate unique local values for `SESSION_SECRET` and `DEVICE_SYNC_TOKEN`; do not use the placeholders from `.env.example`:
 
 ```bash
 python3 -c 'import secrets; print(secrets.token_hex(32))'
 ```
 
-ضع الناتج في `.env`، ثم شغّل MongoDB بإحدى الطريقتين.
+Set the generated values in `.env`. Start MongoDB in one of these ways.
 
-### MongoDB عبر Docker
+### MongoDB with Docker
 
 ```bash
 docker compose up -d mongodb
 ```
 
-تُحفظ البيانات في volume باسم `dementia_mongodb`. Compose يربط المنفذ على الجهاز المحلي فقط.
+MongoDB data is stored in the `dementia_mongodb` volume. Compose binds its port to the local machine only.
 
-### MongoDB مثبتة محليًا
+### Existing local MongoDB
 
-شغّل خادم MongoDB بعنوان `127.0.0.1:27017`، ثم اترك:
+Start MongoDB on `127.0.0.1:27017` and use:
 
 ```dotenv
 MONGODB_URI=mongodb://127.0.0.1:27017
 MONGODB_DB=dementia_face_memory
 ```
 
-في MongoDB Compass استخدم URI نفسه: `mongodb://127.0.0.1:27017`، وافتح قاعدة `dementia_face_memory`. يستطيع الموقع وCompass الاتصال بالخادم نفسه. لو غيّرت URI، اجعل القيمة نفسها في خادمي Next.js وPython.
+MongoDB Compass can use the same URI. Open the `dementia_face_memory` database. If you change the URI, keep it consistent for the services that use MongoDB.
 
-### تثبيت وتشغيل خدمات التطبيق
+### Install and start the app
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ./face_memory_system
 npm install
-```
-
-نزّل أوزان YuNet وSFace من إصدار OpenCV Zoo المثبّت وتحقق من SHA-256 قبل تشغيل الخدمة. ملفات الأوزان لا تدخل المستودع العام:
-
-```bash
 python face_memory_system/models/download_models.py
 ```
 
-في نافذة طرفية أولى، شغّل خدمة الوجه مرة واحدة؛ تفتح أوزان YuNet وSFace عند الإقلاع وتبقيها في الذاكرة:
+The model download script fetches the pinned YuNet and SFace model files and checks their SHA-256 digests. The model weights stay local and are excluded from Git.
+
+In terminal 1, start the face-processing service:
 
 ```bash
 source .venv/bin/activate
 uvicorn face_memory.http_service:app --host 127.0.0.1 --port 8001 --workers 1
 ```
 
-في نافذة ثانية:
+In terminal 2, start Next.js:
 
 ```bash
 npm run dev
 ```
 
-افتح [http://localhost:3000](http://localhost:3000). أنشئ حسابًا خاصًا من صفحة البداية. الوصول إلى الكاميرا يعمل على `localhost` بعد موافقة المتصفح.
+Open [http://localhost:3000](http://localhost:3000) and create a private account. Camera access is available on `localhost` after browser permission is granted. Check model readiness at [http://localhost:3000/api/health](http://localhost:3000/api/health). A `provisional_not_calibrated` status means the app's default threshold has not been calibrated for your camera.
 
-تحقق من جاهزية خدمة الموديل عبر `http://localhost:3000/api/health`؛ حالة `provisional_not_calibrated` تعني أن الحد 0.45 لم يُعاير بعد.
+### Optional local Whisper transcription
 
-### Whisper المحلي (اختياري)
-
-التفريغ غير مُفعّل إذا لم تتوفر حزمة Whisper وFFmpeg؛ تعرض الواجهة رسالة بذلك. لتجهيزه على جهاز يفي بموارد النموذج:
+Transcription is unavailable unless Whisper and FFmpeg are installed. On a machine with enough memory and processing capacity:
 
 ```bash
 sudo apt install ffmpeg
@@ -99,13 +102,13 @@ source .venv/bin/activate
 python -m pip install openai-whisper scipy
 ```
 
-يجري تنزيل أوزان Whisper إلى مخبأ المستخدم عند أول استخدام. التسجيل يدعم العربية؛ اختبر مقطعًا قصيرًا على الجهاز الفعلي قبل العرض. تسجيل المتصفح مؤقت في الذاكرة، ويُرسل للتفريغ ثم يُحذف من الواجهة والخدمة.
+Whisper downloads its model on first use. Browser recordings are kept temporarily in memory, sent for transcription, then deleted by the app and service. Confirm transcription behavior on the target device before presenting it.
 
-## التقييم وملفات البوستر
+## Evaluation and poster figures
 
-راجع [دليل جمع الصور](docs/data-collection.md). ابدأ بـ[قالب manifest](face_memory_system/examples/manifest_template.csv)؛ خزّن الصور والـmanifest الخاص تحت `private_data/` فقط. الأعمدة المطلوبة `image_path,person_id,split,session_id`. لا تضع أسماء أو صورًا في الفرع العام.
+Read the [consented data-collection guide](docs/data-collection.md). Start with [the manifest template](face_memory_system/examples/manifest_template.csv) and keep images, manifests, and detailed per-run reports under `private_data/` only. Required columns are `image_path,person_id,split,session_id`. Use random IDs, not real names.
 
-عاير validation أولًا، بحد أقصى 5% FPIR للغرباء:
+Calibrate the operating threshold on validation data first. The 5% unknown FPIR below is an example proposed constraint; decide the acceptable value before viewing test results.
 
 ```bash
 source .venv/bin/activate
@@ -113,53 +116,52 @@ face-memory-evaluate \
   --manifest private_data/manifest.csv \
   --mode calibrate \
   --max-unknown-fpir 0.05 \
-  --camera "اسم الكاميرا والعدسة" \
-  --device "اسم اللابتوب ومواصفاته" \
-  --output face_memory_system/reports/private/validation.json
+  --camera "camera and lens description" \
+  --device "laptop model and specifications" \
+  --output private_data/reports/validation.json
 ```
 
-شغّل test فقط باستخدام تقرير validation المقفول وإصدار الموديل و`min_margin` نفسيهما:
+Run test once using the locked validation report and unchanged model settings:
 
 ```bash
 face-memory-evaluate \
   --manifest private_data/manifest.csv \
   --mode test \
-  --validation-report face_memory_system/reports/private/validation.json \
-  --camera "اسم الكاميرا والعدسة" \
-  --device "اسم اللابتوب ومواصفاته" \
-  --output face_memory_system/reports/private/test.json
+  --validation-report private_data/reports/validation.json \
+  --camera "camera and lens description" \
+  --device "laptop model and specifications" \
+  --output private_data/reports/test.json
 ```
 
-يكتب كل تشغيل JSON كاملًا داخل مسار التقرير، بالإضافة إلى `poster_metrics.csv` وSVG لمصفوفة الالتباس ومنحنى العتبة. اجعل مجلد التقرير خاصًا إذا احتوى JSON على معرفات أو مسارات ملفات. النتائج المجمعة والرسوم ذات المعرفات العشوائية للنشر موجودة في `reports/public/`؛ الصور والـmanifest والتقارير الكاملة محفوظة محليًا تحت `private_data/` ولا تُنشر.
+The CLI creates a detailed JSON report and aggregate poster files. Keep detailed reports private if they contain IDs or local file paths. Only the anonymized aggregate results and figures under `reports/public/` belong in the public repository.
 
 ## Raspberry Pi 2
 
-يبدأ التصدير من بطاقة الشخص في الموقع: اختر **تصدير Pi**، ثم على الجهاز انسخ ملف JSON إلى مجلد خاص واستورده:
+From a person's card in the website, choose **Export to Pi**. Transfer the resulting private JSON file to the Pi using a trusted local method, then import and try a local test image:
 
 ```bash
-python pi/face_memory_pi.py --import-person /path/to/pi-person-<id>.json --image /path/to/local-test.jpg
+python pi/face_memory_pi.py \
+  --import-person /path/to/pi-person-<id>.json \
+  --image /path/to/local-test.jpg
 ```
 
-إعداد الكاميرا والتوصيلات والصوت وsystemd واختبار الشبكة مشروحة في [دليل Pi 2](pi/README.md). كل قياسات الصوت والكمون معلّمة **في انتظار الاختبار على Pi 2** حتى تُقاس على العتاد نفسه.
+The [Raspberry Pi 2 guide](pi/README.md) covers the operating system, camera and audio wiring, offline operation, event sync, and systemd setup. Pi latency and audio response measurements remain unmeasured until they are collected on the actual Pi 2 hardware.
 
-## Atlas وVercel لاحقًا
+## Deploy on Vercel and connect MongoDB Atlas
 
-لا تتصل النسخة الحالية بخدمات عامة تلقائيًا. عند تجهيز نشر حي، غيّر `MONGODB_URI` إلى Atlas بعد النسخ والتحقق، واضبط `MODEL_SERVICE_URL` على عنوان HTTPS لخدمة Python و`MODEL_SERVICE_TOKEN` السر نفسه في خدمة Python وبيئة Vercel. أبقِ الخدمة خلف TLS والتحقق من الرمز؛ لا تعرض endpoint الموديل بلا مصادقة. التفاصيل في [إعداد النشر](docs/vercel-deployment.md).
+The repository includes a `vercel.json` Services configuration for the Next.js app and a private FastAPI container. On the Vercel import screen shown in the project setup guide, refresh the repository scan after the GitHub update and choose **Import multi-service project**. Do not import the two folders as separate projects for this configuration.
 
-لنقل قاعدة محلية إلى Atlas، استخدم `mongodump` إلى مجلد خاص ثم `mongorestore` إلى URI الهدف. انقل قاعدة البيانات وحدها بعد مراجعة النطاق؛ فهي تحتوي بصمات وجه وسجلات حسابات وليست مادة عامة.
+Expand **Environment Variables** in the import form. Add `MONGODB_URI` and paste the Atlas application connection string into its value. Also add `MONGODB_DB` with `dementia_face_memory`, a unique production `SESSION_SECRET`, `DEVICE_SYNC_TOKEN`, and `MODEL_SERVICE_TOKEN`. The `MODEL_SERVICE_TOKEN` value must be identical for the Next.js app and the face-model service. The `MODEL_SERVICE_URL` value is generated automatically by the private Vercel service binding; do not paste a local `127.0.0.1` URL there.
 
-## الاختبارات الحالية
+The Atlas URI is a secret. Store it in Vercel's environment variables, never in GitHub, a source file, or a message. See [the deployment guide](docs/vercel-deployment.md) for the exact variable scopes and follow-up checks. Vercel Services and its container runtime are currently beta; verify the plan and deployment limits in your Vercel account before relying on them for a live service.
 
-شغّل الاختبارات المتاحة بعد تثبيت التبعيات:
+The repository is prepared for the Vercel import, but this commit does not create or deploy a Vercel project. The Atlas database and model service must be configured and connected in your Vercel project.
 
-```bash
-python -m unittest discover -s face_memory_system/tests -v
-npm run typecheck
-npm run build
-```
+## Hardware, privacy, and licensing
 
-تشغيل FEI ونتائج التقسيم موثّقان في [ملفات البوستر العامة](reports/public/README.md). أما الكاميرا الحية واختبارات Pi 2 فما زالت تحتاج قياسًا على عتادها وبروتوكولها؛ لا تستنتج أداءها من benchmark الصور الثابتة.
+- The prototype is not a clinical or safety system. A caregiver must confirm a match before any personal information or audio is used.
+- Face embeddings are biometric data. Keep the database private and apply access controls. Do not commit `.env`, database backups, face images, embeddings, voice recordings, or person-export JSON files.
+- The FEI Face Database is provided for research use and may not be redistributed or reproduced. The original images, archives, and manifest are excluded from this repository.
+- YuNet and SFace model sources, license files, pinned revisions, and SHA-256 hashes are documented in [the model notes](face_memory_system/models/MODELS.md). Model files are downloaded locally and verified before use.
+- `Insight .pdf` and the inherited prototype archive are not included in the public repository.
 
-## الترخيص والخصوصية
-
-مصدر أوزان YuNet وSFace المثبّت وتراخيصهما وSHA-256 موثق في `face_memory_system/models/MODELS.md`؛ ينزّلهما `download_models.py` إلى المسار المحلي بعد التحقق. ملف ZIP الموروث وملف Insight PDF وأي صور أو قواعد بيانات لا تدخل النشر العام. `.gitignore` يستثني أسرار البيئة والبيانات المحلية والصوت والصور وقواعد البيانات.
